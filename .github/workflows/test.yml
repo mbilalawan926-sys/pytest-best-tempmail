@@ -1,4 +1,4 @@
-name: tests
+﻿name: tests
 
 on:
   push:
@@ -7,23 +7,35 @@ on:
   workflow_dispatch:
 
 jobs:
-  # The mocked suite. Windows is in the matrix because the author develops on
-  # Windows and a Linux-only CI cannot catch path and shell differences, which
-  # is how a broken test script reached npm for the Cypress package.
+  # The mocked suite.
+  #
+  # The matrix is written out rather than built from two lists because one
+  # combination does not exist: ubuntu-latest now resolves to Ubuntu 26.04,
+  # which does not ship Python 3.9 (the actions/python-versions manifest has
+  # 3.9 for 22.04 and 24.04 only). pyproject.toml promises requires-python
+  # >=3.9, so 3.9 gets a runner that still has it rather than being dropped
+  # from CI while still being promised to users.
+  #
+  # Windows is here because the author develops on Windows and a Linux-only CI
+  # cannot catch path and shell differences, which is how a broken test script
+  # reached npm for the Cypress package.
   mocked:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        python: ["3.9", "3.13"]
+        include:
+          - { os: ubuntu-24.04, python: "3.9" }
+          - { os: ubuntu-latest, python: "3.13" }
+          - { os: windows-latest, python: "3.9" }
+          - { os: windows-latest, python: "3.13" }
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
-      - run: pip install -e .
-      - run: pytest tests/ -q
+      - run: python -m pip install -e .
+      - run: python -m pytest tests/ -q
 
   # Against production. This job must FAIL, not skip, when the key is missing:
   # a live job that silently skips is the same failure as a test that passes
@@ -46,11 +58,11 @@ jobs:
           fi
           echo "key present"
 
-      - run: pip install -e .
+      - run: python -m pip install -e .
 
       - name: Run the live example suite
         env:
           BTM_API_KEY: ${{ secrets.BEST_TEMPMAIL_KEY }}
         # Deliberately NOT --btm-skip-without-key. If the key stops working,
         # this job turns red, which is the point.
-        run: pytest examples/ -q
+        run: python -m pytest examples/ -q
