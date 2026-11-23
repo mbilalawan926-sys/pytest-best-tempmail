@@ -1,0 +1,56 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # The mocked suite. Windows is in the matrix because the author develops on
+  # Windows and a Linux-only CI cannot catch path and shell differences, which
+  # is how a broken test script reached npm for the Cypress package.
+  mocked:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.9", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e .
+      - run: pytest tests/ -q
+
+  # Against production. This job must FAIL, not skip, when the key is missing:
+  # a live job that silently skips is the same failure as a test that passes
+  # because no email arrived.
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Require the API key
+        env:
+          BTM_API_KEY: ${{ secrets.BEST_TEMPMAIL_KEY }}
+        run: |
+          if [ -z "$BTM_API_KEY" ]; then
+            echo "::error::BEST_TEMPMAIL_KEY is not set on this repository, so the live job would test nothing. Add it under Settings, Secrets and variables, Actions."
+            exit 1
+          fi
+          echo "key present"
+
+      - run: pip install -e .
+
+      - name: Run the live example suite
+        env:
+          BTM_API_KEY: ${{ secrets.BEST_TEMPMAIL_KEY }}
+        # Deliberately NOT --btm-skip-without-key. If the key stops working,
+        # this job turns red, which is the point.
+        run: pytest examples/ -q

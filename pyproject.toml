@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pytest-best-tempmail"
+version = "1.0.0"
+description = "pytest fixtures for real disposable email inboxes: receive mail and read verification codes in your tests."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Best Temp Mail" }]
+keywords = ["pytest", "testing", "email", "disposable", "temporary", "otp", "verification", "signup"]
+classifiers = [
+    "Framework :: Pytest",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Communications :: Email",
+]
+
+# best-tempmail is pinned at 2.0.0 and not lower on purpose: 1.x could not see
+# mail that had already been delivered and silently clamped the caller's
+# timeout to a single 55-second request. A fixture built on it would inherit
+# both, and the inherited failure looks like "the email never arrived".
+dependencies = [
+    "pytest>=8.0",
+    "best-tempmail>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://best-tempmail.com/api"
+Documentation = "https://best-tempmail.com/api"
+Repository = "https://github.com/mbilalawan926-sys/pytest-best-tempmail"
+
+# This is what makes the fixtures appear without anyone importing anything.
+[project.entry-points.pytest11]
+best_tempmail = "pytest_best_tempmail.plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pytest_best_tempmail"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "README.md", "CHANGELOG.md", "LICENSE"]
